@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"github.com/ProgrammingLanguageLeader/AwesomeMentionBot/setting"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"math/rand"
 )
@@ -17,17 +18,26 @@ func HandleMessage(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 		SendMessage(bot, update, responseText)
 		return
 	}
-	skip := message.From.UserName != "dm_shorokhov" &&
+	config := setting.GetConfig()
+	skip := config.DevMode &&
+		message.From.UserName != "dm_shorokhov" &&
 		(!message.Chat.IsGroup() || message.Chat.IsGroup() && message.IsCommand())
-	if skip && message.IsCommand() {
-		responseText = "Не командуй тут мне, я подчиняюсь только хозяину!"
-		SendMessage(bot, update, responseText)
-		return
-	}
 	if skip {
 		responseText = "Тебе нельзя писать мне! Я на стадии разработки..."
 		SendMessage(bot, update, responseText)
 		return
+	}
+	members := message.NewChatMembers
+	wasBotAddedToChat := false
+	if members != nil {
+		for _, member := range *members {
+			if member.UserName == config.BotUsername {
+				wasBotAddedToChat = true
+			}
+		}
+	}
+	if wasBotAddedToChat || message.ChannelChatCreated || message.GroupChatCreated {
+		HandleFirstMessage(bot, update)
 	}
 	if message.IsCommand() {
 		HandleCommand(bot, update)

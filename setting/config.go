@@ -1,4 +1,4 @@
-package main
+package setting
 
 import (
 	"github.com/kelseyhightower/envconfig"
@@ -8,6 +8,11 @@ import (
 type Config struct {
 	Token                 string `envconfig:"TELEGRAM_TOKEN" required:"true"`
 	IsDebugLoggingEnabled bool   `envconfig:"TELEGRAM_IS_DEBUG_LOGGING_ENABLED" default:"false"`
+	RedisURL              string `envconfig:"REDIS_URL" default:"localhost:6379"`
+	RedisDB               int    `envconfig:"REDIS_DB" default:"0"`
+	RedisPassword         string `envconfig:"REDIS_PASSWORD" default:""`
+	DevMode               bool   `envconfig:"DEV_MODE" default:"false"`
+	BotUsername           string `envconfig:"BOT_USERNAME"`
 }
 
 func GetConfig() *Config {
