@@ -13,6 +13,8 @@ type Config struct {
 	RedisPassword         string `envconfig:"REDIS_PASSWORD" default:""`
 	DevMode               bool   `envconfig:"DEV_MODE" default:"false"`
 	BotUsername           string `envconfig:"BOT_USERNAME"`
+	BotURL                string `envconfig:"BOT_URL" default:"0.0.0.0:8443"`
+	Port                  string `envconfig:"PORT" default:"8443"`
 }
 
 func GetConfig() *Config {
