@@ -30,7 +30,7 @@ func GetChatSettings(chatID int64) (*ChatSettings, error) {
 	chatKey := strconv.FormatInt(chatID, 10)
 	settingsMarshal, err := GetDBClient().Get(ctx, chatKey).Result()
 	if err != nil {
-		logrus.Errorf("get chat settings error: %s", err.Error())
+		logrus.Warnf("get chat settings error: %s", err.Error())
 		return nil, err
 	}
 	var settings ChatSettings

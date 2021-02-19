@@ -7,20 +7,36 @@ import (
 	"strings"
 )
 
+const (
+	startCommand          = "start"
+	allCommand            = "all"
+	inCommand             = "in"
+	outCommand            = "out"
+	helpCommand           = "help"
+	setMentionTextCommand = "setmentiontext"
+)
+
+const (
+	errorMessage = "Something went wrong. Try again later"
+	doneMessage  = "Done"
+)
+
 func HandleCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	message := update.Message
 	if message.IsCommand() {
 		switch message.Command() {
-		case "start":
+		case startCommand:
 			HandleFirstMessage(bot, update)
-		case "all":
+		case allCommand:
 			HandleAllCommand(bot, update)
-		case "in":
+		case inCommand:
 			HandleInCommand(bot, update)
-		case "out":
+		case outCommand:
 			HandleOutCommand(bot, update)
-		case "help":
+		case helpCommand:
 			HandleHelpCommand(bot, update)
+		case setMentionTextCommand:
+			HandleSetMentionText(bot, update)
 		default:
 			responseText := "No such command. Use /help for getting a manual"
 			SendMessage(bot, update, responseText)
@@ -44,9 +60,9 @@ func HandleFirstMessage(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	chatID := update.Message.Chat.ID
 	settings, _ := db.GetChatSettings(chatID)
 	if settings == nil {
+		defaultMentionText := "Attention please!"
 		db.SaveChatSettings(chatID, &db.ChatSettings{
-			MentionText: "For the Emperor!\n" +
-				"https://coub.com/view/1o7a89",
+			MentionText: defaultMentionText,
 			MentionList: mentionList,
 		})
 		SendMessage(bot, update, "Bot has been initiated!")
@@ -77,9 +93,9 @@ func HandleInCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	}
 	_, err := db.IncludeUsersToMentionList(chatID, includeUsernameArray)
 	if err != nil {
-		SendMessage(bot, update, "Something went wrong. Try again later")
+		SendMessage(bot, update, errorMessage)
 	}
-	SendMessage(bot, update, "Done!")
+	SendMessage(bot, update, doneMessage)
 }
 
 func HandleOutCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
@@ -92,12 +108,26 @@ func HandleOutCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	}
 	_, err := db.ExcludeUsersFromMentionList(chatID, excludeUsernameArray)
 	if err != nil {
-		SendMessage(bot, update, "Something went wrong. Try again later")
+		SendMessage(bot, update, errorMessage)
 	}
-	SendMessage(bot, update, "Done!")
+	SendMessage(bot, update, doneMessage)
 }
 
 func HandleHelpCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	responseText := "My developer is too lazy to write manual..."
 	SendMessage(bot, update, responseText)
+}
+
+func HandleSetMentionText(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
+	chatID := update.Message.Chat.ID
+	text := update.Message.Text
+	settings, err := db.GetChatSettings(chatID)
+	if err != nil {
+		SendMessage(bot, update, errorMessage)
+		return
+	}
+	const commandPrefix = "/" + setMentionTextCommand + " "
+	settings.MentionText = strings.TrimPrefix(text, commandPrefix)
+	db.SaveChatSettings(chatID, settings)
+	SendMessage(bot, update, doneMessage)
 }
