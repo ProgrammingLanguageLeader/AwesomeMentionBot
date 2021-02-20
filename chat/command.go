@@ -68,10 +68,8 @@ func HandleFirstMessage(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 			MentionText:         defaultMentionText,
 			MentionUsernameList: mentionList,
 		})
-		SendMessage(bot, update, "Bot has been initiated!")
-	} else {
-		return
 	}
+	SendMessage(bot, update, "Bot has been initiated!")
 }
 
 func HandleAllCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
