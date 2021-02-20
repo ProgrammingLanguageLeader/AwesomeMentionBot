@@ -124,12 +124,22 @@ func HandleInCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 func HandleOutCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	chatID := update.Message.Chat.ID
 	text := update.Message.Text
-	excludeUsernameArray := strings.Split(text, " ")[1:]
-	if len(excludeUsernameArray) == 0 {
+	messageEntities := *update.Message.Entities
+	if len(messageEntities) == 1 {
 		SendMessage(bot, update, "Specify one or more username to include them in the mention list")
 		return
 	}
-	_, err := db.ExcludeUsersFromMentionList(chatID, excludeUsernameArray)
+	excludeUsernameList := list.New()
+	excludeUserList := list.New()
+	for _, messageEntity := range messageEntities {
+		if messageEntity.Type == "mention" {
+			mentionText := text[messageEntity.Offset : messageEntity.Offset+messageEntity.Length]
+			excludeUsernameList.PushBack(mentionText)
+		} else if messageEntity.Type == "text_mention" {
+			excludeUserList.PushBack(*messageEntity.User)
+		}
+	}
+	_, err := db.ExcludeUsersFromMentionList(chatID, excludeUsernameList, excludeUserList)
 	if err != nil {
 		SendMessage(bot, update, errorMessage)
 	}

@@ -79,13 +79,17 @@ func IncludeUsersToMentionList(chatID int64, includeUsernameList *list.List, inc
 
 	if needSave {
 		newUsernameArray := make([]string, len(mentionUsernameSet))
+		usernameIndex := 0
 		for username := range mentionUsernameSet {
-			newUsernameArray = append(newUsernameArray, username)
+			newUsernameArray[usernameIndex] = username
+			usernameIndex++
 		}
 		settings.MentionUsernameList = newUsernameArray
 		newUserArray := make([]tgbotapi.User, len(mentionUserSet))
+		userIndex := 0
 		for _, user := range mentionUserSet {
-			newUserArray = append(newUserArray, user)
+			newUserArray[userIndex] = user
+			userIndex++
 		}
 		settings.MentionUserList = newUserArray
 		SaveChatSettings(chatID, settings)
@@ -93,7 +97,7 @@ func IncludeUsersToMentionList(chatID int64, includeUsernameList *list.List, inc
 	return settings, nil
 }
 
-func ExcludeUsersFromMentionList(chatID int64, excludeUsernameArray []string) (*ChatSettings, error) {
+func ExcludeUsersFromMentionList(chatID int64, excludeUsernameList *list.List, excludeUserList *list.List) (*ChatSettings, error) {
 	settings, err := GetChatSettings(chatID)
 	if err != nil {
 		logrus.Errorf("exclude user error: %s", err.Error())
@@ -105,10 +109,24 @@ func ExcludeUsersFromMentionList(chatID int64, excludeUsernameArray []string) (*
 	for _, username := range settings.MentionUsernameList {
 		mentionUsernameSet[username] = true
 	}
-	for _, excludeUsername := range excludeUsernameArray {
-		_, usernameInList := mentionUsernameSet[excludeUsername]
+	mentionUserSet := map[int]tgbotapi.User{}
+	for _, user := range settings.MentionUserList {
+		mentionUserSet[user.ID] = user
+	}
+
+	for excludeUsername := excludeUsernameList.Front(); excludeUsername != nil; excludeUsername = excludeUsername.Next() {
+		username := excludeUsername.Value.(string)
+		_, usernameInList := mentionUsernameSet[username]
 		if usernameInList {
-			delete(mentionUsernameSet, excludeUsername)
+			delete(mentionUsernameSet, username)
+			needSave = true
+		}
+	}
+	for excludeUser := excludeUserList.Front(); excludeUser != nil; excludeUser = excludeUser.Next() {
+		user := excludeUser.Value.(tgbotapi.User)
+		_, userInList := mentionUserSet[user.ID]
+		if userInList {
+			delete(mentionUserSet, user.ID)
 			needSave = true
 		}
 	}
@@ -119,6 +137,11 @@ func ExcludeUsersFromMentionList(chatID int64, excludeUsernameArray []string) (*
 			newUsernameArray = append(newUsernameArray, username)
 		}
 		settings.MentionUsernameList = newUsernameArray
+		newUserArray := make([]tgbotapi.User, len(mentionUserSet))
+		for _, user := range mentionUserSet {
+			newUserArray = append(newUserArray, user)
+		}
+		settings.MentionUserList = newUserArray
 		SaveChatSettings(chatID, settings)
 	}
 	return settings, nil
