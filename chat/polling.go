@@ -20,7 +20,7 @@ func StartPolling() {
 	updateConfig.Timeout = 60
 	updates, err := bot.GetUpdatesChan(updateConfig)
 	if err != nil {
-		logrus.Errorf("get updates chan error: %s", err.Error())
+		logrus.Errorf("get updates chan error: %v", err)
 	}
 	for update := range updates {
 		if update.Message == nil {

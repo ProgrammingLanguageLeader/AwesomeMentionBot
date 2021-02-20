@@ -19,12 +19,12 @@ func SaveChatSettings(chatID int64, settings *ChatSettings) {
 	ctx := context.Background()
 	settingsMarshal, err := json.Marshal(settings)
 	if err != nil {
-		logrus.Errorf("marshalling error: %s", err.Error())
+		logrus.Errorf("marshalling error: %v", err)
 	}
 	chatKey := strconv.FormatInt(chatID, 10)
 	_, err = GetDBClient().Set(ctx, chatKey, settingsMarshal, 0).Result()
 	if err != nil {
-		logrus.Errorf("create chat settings error: %s", err.Error())
+		logrus.Errorf("create chat settings error: %v", err)
 	}
 }
 
@@ -38,7 +38,7 @@ func GetChatSettings(chatID int64) (*ChatSettings, error) {
 	}
 	var settings ChatSettings
 	if err := json.Unmarshal([]byte(settingsMarshal), &settings); err != nil {
-		logrus.Errorf("unmarshal error: %s", err.Error())
+		logrus.Errorf("unmarshal error: %v", err)
 	}
 	return &settings, nil
 }
@@ -46,7 +46,7 @@ func GetChatSettings(chatID int64) (*ChatSettings, error) {
 func IncludeUsersToMentionList(chatID int64, includeUsernameList *list.List, includeUserList *list.List) (*ChatSettings, error) {
 	settings, err := GetChatSettings(chatID)
 	if err != nil {
-		logrus.Errorf("adding user error: %s", err.Error())
+		logrus.Errorf("adding user error: %v", err)
 		return nil, err
 	}
 
@@ -100,7 +100,7 @@ func IncludeUsersToMentionList(chatID int64, includeUsernameList *list.List, inc
 func ExcludeUsersFromMentionList(chatID int64, excludeUsernameList *list.List, excludeUserList *list.List) (*ChatSettings, error) {
 	settings, err := GetChatSettings(chatID)
 	if err != nil {
-		logrus.Errorf("exclude user error: %s", err.Error())
+		logrus.Errorf("exclude user error: %v", err)
 		return nil, err
 	}
 

@@ -122,6 +122,7 @@ func HandleInCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	_, err := db.IncludeUsersToMentionList(chatID, includeUsernameList, includeUserList)
 	if err != nil {
 		SendMessage(bot, update, errorMessage)
+		return
 	}
 	SendMessage(bot, update, doneMessage)
 }
@@ -147,6 +148,7 @@ func HandleOutCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	_, err := db.ExcludeUsersFromMentionList(chatID, excludeUsernameList, excludeUserList)
 	if err != nil {
 		SendMessage(bot, update, errorMessage)
+		return
 	}
 	SendMessage(bot, update, doneMessage)
 }
