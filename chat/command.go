@@ -7,6 +7,7 @@ import (
 	"github.com/ProgrammingLanguageLeader/AwesomeMentionBot/setting"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/sirupsen/logrus"
+	"math"
 	"strings"
 )
 
@@ -73,33 +74,54 @@ func HandleFirstMessage(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 }
 
 func HandleAllCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
+	const mentionLimit = 6
 	chatSettings, err := db.GetChatSettings(update.Message.Chat.ID)
 	if err != nil {
 		SendMessage(bot, update, "Bot hasn't been initiated. Use /start to do this")
 		return
 	}
-	var replyTextBuilder strings.Builder
 	mentionText := chatSettings.MentionText
 	commandArgs := update.Message.CommandArguments()
 	if commandArgs != "" {
 		mentionText = commandArgs
 	}
-	replyTextBuilder.WriteString(EscapeString(mentionText))
-	replyTextBuilder.WriteString("\n")
-	for _, username := range chatSettings.MentionUsernameList {
-		replyTextBuilder.WriteString(EscapeString(username))
-		replyTextBuilder.WriteString(" ")
-	}
-	for _, user := range chatSettings.MentionUserList {
-		replyTextBuilder.WriteString(fmt.Sprintf("[%s](tg://user?id=%d)", user.FirstName, user.ID))
-		replyTextBuilder.WriteString(" ")
-	}
-	response := tgbotapi.NewMessage(update.Message.Chat.ID, replyTextBuilder.String())
-	response.ReplyToMessageID = update.Message.MessageID
-	response.ParseMode = "MarkdownV2"
-	_, err = bot.Send(response)
-	if err != nil {
-		logrus.Errorf("error while sending message: %v", err)
+	escapedMentionText := EscapeString(mentionText)
+	mentionsNumber := float64(len(chatSettings.MentionUsernameList) + len(chatSettings.MentionUserList))
+	messagesNumber := int(math.Ceil(mentionsNumber / mentionLimit))
+	usernameListOffset := 0
+	userListOffset := 0
+	for messageIndex := 0; messageIndex < messagesNumber; messageIndex++ {
+		var replyTextBuilder strings.Builder
+		replyTextBuilder.WriteString(escapedMentionText)
+		replyTextBuilder.WriteString("\n")
+		usernameListTop := usernameListOffset + mentionLimit
+		if usernameListTop > len(chatSettings.MentionUsernameList) {
+			usernameListTop = len(chatSettings.MentionUsernameList)
+		}
+		usernameSlice := chatSettings.MentionUsernameList[usernameListOffset:usernameListTop]
+		for _, username := range usernameSlice {
+			replyTextBuilder.WriteString(EscapeString(username))
+			replyTextBuilder.WriteString(" ")
+		}
+		usernameListOffset += len(usernameSlice)
+		userListTop := userListOffset + (mentionLimit - len(usernameSlice))
+		if userListTop > len(chatSettings.MentionUserList) {
+			userListTop = len(chatSettings.MentionUserList)
+		}
+		userSlice := chatSettings.MentionUserList[userListOffset:userListTop]
+		for _, user := range userSlice {
+			replyTextBuilder.WriteString(fmt.Sprintf("[%s](tg://user?id=%d)", user.FirstName, user.ID))
+			replyTextBuilder.WriteString(" ")
+		}
+		userListOffset += len(userSlice)
+		message := tgbotapi.NewMessage(update.Message.Chat.ID, replyTextBuilder.String())
+		message.ReplyToMessageID = update.Message.MessageID
+		message.ParseMode = "MarkdownV2"
+		_, err = bot.Send(message)
+		if err != nil {
+			logrus.Errorf("error while sending message: %v", err)
+		}
+		logrus.Infof("Message sent: chatID=%d text=%s", message.ChatID, message.Text)
 	}
 }
 
