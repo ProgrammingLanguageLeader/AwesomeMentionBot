@@ -77,7 +77,12 @@ func HandleFirstMessage(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 func HandleAllCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	chatSettings, _ := db.GetChatSettings(update.Message.Chat.ID)
 	var replyTextBuilder strings.Builder
-	replyTextBuilder.WriteString(EscapeString(chatSettings.MentionText))
+	mentionText := chatSettings.MentionText
+	commandArgs := update.Message.CommandArguments()
+	if commandArgs != "" {
+		mentionText = commandArgs
+	}
+	replyTextBuilder.WriteString(EscapeString(mentionText))
 	replyTextBuilder.WriteString("\n")
 	for _, username := range chatSettings.MentionUsernameList {
 		replyTextBuilder.WriteString(EscapeString(username))
