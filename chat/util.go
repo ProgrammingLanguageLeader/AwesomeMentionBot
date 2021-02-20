@@ -16,6 +16,7 @@ func SendMessage(bot *tgbotapi.BotAPI, update *tgbotapi.Update, responseText str
 	if err != nil {
 		logrus.Errorf("error while sending message: %v", err)
 	}
+	logrus.Infof("Message sent: chatID=%d text=%s", response.ChatID, response.Text)
 }
 
 func EscapeString(str string) string {
