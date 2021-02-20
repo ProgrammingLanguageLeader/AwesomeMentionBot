@@ -1,9 +1,12 @@
 package chat
 
 import (
+	"container/list"
+	"fmt"
 	"github.com/ProgrammingLanguageLeader/AwesomeMentionBot/db"
 	"github.com/ProgrammingLanguageLeader/AwesomeMentionBot/setting"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/sirupsen/logrus"
 	"strings"
 )
 
@@ -62,8 +65,8 @@ func HandleFirstMessage(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	if settings == nil {
 		defaultMentionText := "Attention please!"
 		db.SaveChatSettings(chatID, &db.ChatSettings{
-			MentionText: defaultMentionText,
-			MentionList: mentionList,
+			MentionText:         defaultMentionText,
+			MentionUsernameList: mentionList,
 		})
 		SendMessage(bot, update, "Bot has been initiated!")
 	} else {
@@ -74,24 +77,44 @@ func HandleFirstMessage(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 func HandleAllCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	chatSettings, _ := db.GetChatSettings(update.Message.Chat.ID)
 	var replyTextBuilder strings.Builder
-	replyTextBuilder.WriteString(chatSettings.MentionText)
+	replyTextBuilder.WriteString(EscapeString(chatSettings.MentionText))
 	replyTextBuilder.WriteString("\n")
-	for _, username := range chatSettings.MentionList {
-		replyTextBuilder.WriteString(username)
+	for _, username := range chatSettings.MentionUsernameList {
+		replyTextBuilder.WriteString(EscapeString(username))
 		replyTextBuilder.WriteString(" ")
 	}
-	SendMessage(bot, update, replyTextBuilder.String())
+	for _, user := range chatSettings.MentionUserList {
+		replyTextBuilder.WriteString(fmt.Sprintf("[%s](tg://user?id=%d)", user.FirstName, user.ID))
+		replyTextBuilder.WriteString(" ")
+	}
+	response := tgbotapi.NewMessage(update.Message.Chat.ID, replyTextBuilder.String())
+	response.ReplyToMessageID = update.Message.MessageID
+	response.ParseMode = "MarkdownV2"
+	_, err := bot.Send(response)
+	if err != nil {
+		logrus.Errorf("error while sending message: %v", err)
+	}
 }
 
 func HandleInCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	chatID := update.Message.Chat.ID
 	text := update.Message.Text
-	includeUsernameArray := strings.Split(text, " ")[1:]
-	if len(includeUsernameArray) == 0 {
-		SendMessage(bot, update, "Specify one of more username to include them in the mention list")
+	messageEntities := *update.Message.Entities
+	if len(messageEntities) == 1 {
+		SendMessage(bot, update, "Specify one or more username to include them in the mention list")
 		return
 	}
-	_, err := db.IncludeUsersToMentionList(chatID, includeUsernameArray)
+	includeUsernameList := list.New()
+	includeUserList := list.New()
+	for _, messageEntity := range messageEntities {
+		if messageEntity.Type == "mention" {
+			mentionText := text[messageEntity.Offset : messageEntity.Offset+messageEntity.Length]
+			includeUsernameList.PushBack(mentionText)
+		} else if messageEntity.Type == "text_mention" {
+			includeUserList.PushBack(*messageEntity.User)
+		}
+	}
+	_, err := db.IncludeUsersToMentionList(chatID, includeUsernameList, includeUserList)
 	if err != nil {
 		SendMessage(bot, update, errorMessage)
 	}
@@ -103,7 +126,7 @@ func HandleOutCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	text := update.Message.Text
 	excludeUsernameArray := strings.Split(text, " ")[1:]
 	if len(excludeUsernameArray) == 0 {
-		SendMessage(bot, update, "Specify one of more username to include them in the mention list")
+		SendMessage(bot, update, "Specify one or more username to include them in the mention list")
 		return
 	}
 	_, err := db.ExcludeUsersFromMentionList(chatID, excludeUsernameArray)

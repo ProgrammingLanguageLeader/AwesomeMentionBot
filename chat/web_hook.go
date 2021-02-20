@@ -30,7 +30,7 @@ func StartWebHook() {
 	go func() {
 		err := http.ListenAndServe(":"+config.Port, nil)
 		if err != nil {
-			logrus.Errorf("webhook error: %s", err.Error())
+			logrus.Errorf("webhook error: %v", err)
 		}
 	}()
 	updates := bot.ListenForWebhook("/" + config.Token)

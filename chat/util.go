@@ -2,7 +2,8 @@ package chat
 
 import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
+	"strings"
 )
 
 func SendMessage(bot *tgbotapi.BotAPI, update *tgbotapi.Update, responseText string) {
@@ -13,6 +14,15 @@ func SendMessage(bot *tgbotapi.BotAPI, update *tgbotapi.Update, responseText str
 	response.ReplyToMessageID = update.Message.MessageID
 	_, err := bot.Send(response)
 	if err != nil {
-		log.Errorf("error while sending message: %s", err.Error())
+		logrus.Errorf("error while sending message: %v", err)
 	}
+}
+
+func EscapeString(str string) string {
+	escapeSeqs := []string{"_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!"}
+	for _, escapeSeq := range escapeSeqs {
+		escapedSeq := "\\" + escapeSeq
+		str = strings.ReplaceAll(str, escapeSeq, escapedSeq)
+	}
+	return str
 }

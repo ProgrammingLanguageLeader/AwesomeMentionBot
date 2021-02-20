@@ -1,15 +1,18 @@
 package db
 
 import (
+	"container/list"
 	"context"
 	"encoding/json"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/sirupsen/logrus"
 	"strconv"
 )
 
 type ChatSettings struct {
-	MentionText string   `json:"mention_text"`
-	MentionList []string `json:"mention_list"`
+	MentionText         string          `json:"mention_text"`
+	MentionUsernameList []string        `json:"mention_username_list"`
+	MentionUserList     []tgbotapi.User `json:"mention_user_list"`
 }
 
 func SaveChatSettings(chatID int64, settings *ChatSettings) {
@@ -40,7 +43,7 @@ func GetChatSettings(chatID int64) (*ChatSettings, error) {
 	return &settings, nil
 }
 
-func IncludeUsersToMentionList(chatID int64, includeUsernameArray []string) (*ChatSettings, error) {
+func IncludeUsersToMentionList(chatID int64, includeUsernameList *list.List, includeUserList *list.List) (*ChatSettings, error) {
 	settings, err := GetChatSettings(chatID)
 	if err != nil {
 		logrus.Errorf("adding user error: %s", err.Error())
@@ -49,13 +52,27 @@ func IncludeUsersToMentionList(chatID int64, includeUsernameArray []string) (*Ch
 
 	mentionUsernameSet := map[string]bool{}
 	needSave := false
-	for _, username := range settings.MentionList {
+	for _, username := range settings.MentionUsernameList {
 		mentionUsernameSet[username] = true
 	}
-	for _, includeUsername := range includeUsernameArray {
-		_, usernameInList := mentionUsernameSet[includeUsername]
+	mentionUserSet := map[int]tgbotapi.User{}
+	for _, user := range settings.MentionUserList {
+		mentionUserSet[user.ID] = user
+	}
+
+	for includeUsername := includeUsernameList.Front(); includeUsername != nil; includeUsername = includeUsername.Next() {
+		username := includeUsername.Value.(string)
+		_, usernameInList := mentionUsernameSet[username]
 		if !usernameInList {
-			mentionUsernameSet[includeUsername] = true
+			mentionUsernameSet[username] = true
+			needSave = true
+		}
+	}
+	for includeUser := includeUserList.Front(); includeUser != nil; includeUser = includeUser.Next() {
+		user := includeUser.Value.(tgbotapi.User)
+		_, userInList := mentionUserSet[user.ID]
+		if !userInList {
+			mentionUserSet[user.ID] = user
 			needSave = true
 		}
 	}
@@ -65,7 +82,12 @@ func IncludeUsersToMentionList(chatID int64, includeUsernameArray []string) (*Ch
 		for username := range mentionUsernameSet {
 			newUsernameArray = append(newUsernameArray, username)
 		}
-		settings.MentionList = newUsernameArray
+		settings.MentionUsernameList = newUsernameArray
+		newUserArray := make([]tgbotapi.User, len(mentionUserSet))
+		for _, user := range mentionUserSet {
+			newUserArray = append(newUserArray, user)
+		}
+		settings.MentionUserList = newUserArray
 		SaveChatSettings(chatID, settings)
 	}
 	return settings, nil
@@ -80,7 +102,7 @@ func ExcludeUsersFromMentionList(chatID int64, excludeUsernameArray []string) (*
 
 	mentionUsernameSet := map[string]bool{}
 	needSave := false
-	for _, username := range settings.MentionList {
+	for _, username := range settings.MentionUsernameList {
 		mentionUsernameSet[username] = true
 	}
 	for _, excludeUsername := range excludeUsernameArray {
@@ -96,7 +118,7 @@ func ExcludeUsersFromMentionList(chatID int64, excludeUsernameArray []string) (*
 		for username := range mentionUsernameSet {
 			newUsernameArray = append(newUsernameArray, username)
 		}
-		settings.MentionList = newUsernameArray
+		settings.MentionUsernameList = newUsernameArray
 		SaveChatSettings(chatID, settings)
 	}
 	return settings, nil

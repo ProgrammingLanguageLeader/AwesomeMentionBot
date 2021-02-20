@@ -14,6 +14,8 @@ func StartPolling() {
 	}
 	bot.Debug = config.IsDebugLoggingEnabled
 	logrus.Infof("Authorized on account %s", bot.Self.UserName)
+	res, err := bot.RemoveWebhook()
+	logrus.Infof("remove webhook %v", res)
 	updateConfig := tgbotapi.NewUpdate(0)
 	updateConfig.Timeout = 60
 	updates, err := bot.GetUpdatesChan(updateConfig)

@@ -2,7 +2,7 @@ package setting
 
 import (
 	"github.com/kelseyhightower/envconfig"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type Config struct {
@@ -22,7 +22,7 @@ func GetConfig() *Config {
 	var config Config
 	err := envconfig.Process(appPrefix, &config)
 	if err != nil {
-		log.Fatal("Cannot process bot config")
+		logrus.Fatal("Cannot process bot config")
 	}
 	return &config
 }
