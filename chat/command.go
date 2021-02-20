@@ -75,7 +75,11 @@ func HandleFirstMessage(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 }
 
 func HandleAllCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
-	chatSettings, _ := db.GetChatSettings(update.Message.Chat.ID)
+	chatSettings, err := db.GetChatSettings(update.Message.Chat.ID)
+	if err != nil {
+		SendMessage(bot, update, "Bot hasn't been initiated. Use /start to do this")
+		return
+	}
 	var replyTextBuilder strings.Builder
 	mentionText := chatSettings.MentionText
 	commandArgs := update.Message.CommandArguments()
@@ -95,7 +99,7 @@ func HandleAllCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	response := tgbotapi.NewMessage(update.Message.Chat.ID, replyTextBuilder.String())
 	response.ReplyToMessageID = update.Message.MessageID
 	response.ParseMode = "MarkdownV2"
-	_, err := bot.Send(response)
+	_, err = bot.Send(response)
 	if err != nil {
 		logrus.Errorf("error while sending message: %v", err)
 	}
