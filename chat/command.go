@@ -159,8 +159,20 @@ func HandleSetMentionText(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 		SendMessage(bot, update, errorMessage)
 		return
 	}
-	const commandPrefix = "/" + setMentionTextCommand + " "
-	settings.MentionText = strings.TrimPrefix(text, commandPrefix)
+	messageEntities := *update.Message.Entities
+	commandEntity := messageEntities[0]
+	if len(text) == commandEntity.Length {
+		settings.MentionText = ""
+	} else {
+		trim := strings.Trim(text, " ")
+		if len(trim) == commandEntity.Length {
+			SendMessage(bot, update, "Incorrect input")
+			return
+		} else {
+			mentionTextOffset := commandEntity.Length + 1
+			settings.MentionText = text[mentionTextOffset:]
+		}
+	}
 	db.SaveChatSettings(chatID, settings)
 	SendMessage(bot, update, doneMessage)
 }

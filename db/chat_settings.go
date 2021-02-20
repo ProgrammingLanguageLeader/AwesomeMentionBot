@@ -133,13 +133,17 @@ func ExcludeUsersFromMentionList(chatID int64, excludeUsernameList *list.List, e
 
 	if needSave {
 		newUsernameArray := make([]string, len(mentionUsernameSet))
+		usernameIndex := 0
 		for username := range mentionUsernameSet {
-			newUsernameArray = append(newUsernameArray, username)
+			newUsernameArray[usernameIndex] = username
+			usernameIndex++
 		}
 		settings.MentionUsernameList = newUsernameArray
 		newUserArray := make([]tgbotapi.User, len(mentionUserSet))
+		userIndex := 0
 		for _, user := range mentionUserSet {
-			newUserArray = append(newUserArray, user)
+			newUserArray[userIndex] = user
+			userIndex++
 		}
 		settings.MentionUserList = newUserArray
 		SaveChatSettings(chatID, settings)
